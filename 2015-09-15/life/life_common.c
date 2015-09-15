@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <omp.h>
 
 #include "crc32.h"
 #include "life_common.h"
@@ -124,8 +125,13 @@ int main(int argc, char** argv)
             print_board(&problem);
             advance_board(&problem, 1);
         }
-    } else
+    } else {
+        double t0 = omp_get_wtime();
         advance_board(&problem, problem.g);
+        double t1 = omp_get_wtime();
+        printf("Cells / sec: %e\n",
+               (t1-t0)/problem.g/problem.nboard/problem.nboard);
+    }
     printf("Final checksum: %08X\n", board_checksum(&problem));
     destroy_board(&problem);
     return 0;
