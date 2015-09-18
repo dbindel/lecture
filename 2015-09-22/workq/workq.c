@@ -1,14 +1,6 @@
 /* workq.c --
  *
- *   Driver syntax: ./workq [nthreads]
- *   Defaults to nthreads = 1
- *
- * Example of a multi-threaded work queue.  This implementation does
- * not have proper synchronization -- your job is to add it in!  Search
- * for the TODO comments below.
- *
- * We do provide some convenience functions to wrap the pthread library
- * calls, if you'd like to use them.
+ * Example of a multi-threaded work queue.
  */
 
 #include <stdio.h>
@@ -146,31 +138,36 @@ void workq_wait(workq_t* workq)
 
 /*
  * Add work to the queue
- * TODO: This needs synchronization!
  */
 void workq_put(workq_t* workq, void* data)
 {
     task_t* task = (task_t*) malloc(sizeof(task_t));
     task->data = data;
+    workq_lock(workq);
+    if (workq->tasks != NULL)
+        workq_signal(workq);
     task->next = workq->tasks;
     workq->tasks = task;
+    workq_unlock(workq);
 }
 
 
 /*
  * Get a data item from the queue.  We assume NULL data can be used
  * to signal that the queue is empty.
- * TODO: This needs synchronization!
  */
 void* workq_get(workq_t* workq)
 {
     void* result = NULL;
+    workq_lock(workq);
+    workq_wait(workq);
     if (workq->tasks) {
         task_t* task = workq->tasks;
         result = task->data;
         workq->tasks = task->next;
         free(task);
     }
+    workq_unlock(workq);
     return result;
 }
 
@@ -179,11 +176,13 @@ void* workq_get(workq_t* workq)
  * Signal that no more work will be added to the queue.
  * NB: This function can be called when there are still tasks to process!
  *     We're just saying that we're done adding new tasks.
- * TODO: This needs synchronization!
  */
 void workq_finish(workq_t* workq)
 {
+    workq_lock(workq);
     workq->done = 1;
+    workq_broadcast(workq);
+    workq_unlock(workq);
 }
 
 
