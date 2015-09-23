@@ -21,3 +21,49 @@ Consider the following questions:
 2. What about a simple model to predict time for one person to count?
 3. How big should the class be before the parallel method takes less time?
 
+--
+
+Suppose N students evenly distributed across R rows.  We will also
+assume that the time to count one student (either by the instructor or
+by someone in the class) is t_s; and the time for the instructor to
+call on someone and add their contribution is t_r.  Then the time for
+the parallel protocol is
+
+  (N/R)*t_s + R*t_r
+
+while the time for a naive method is
+
+  N*t_s
+
+The condition for the parallel protocol to run faster is
+
+  (N/R)*t_s + R*t_r < N*t_s
+  t_r/t_s < N*(R-1)/R^2
+
+A reasonable alternate formulation is to say there are R rows of B
+students each (i.e. N/R = B in the previous version).  In this case,
+we might assume the number of rows scales with the size of the class,
+but B remains fixed.  This would give a time of
+
+  B*t_s + R*t_r
+
+with the naive method time
+
+  R*B*t_s
+
+and the condition for the parallel protocol to run faster would be
+
+  B*t_s + R*t_r < R*B*t_s
+  t_r/t_s < (1-1/R)*B
+
+In words, the only way there is a prayer that the parallel protocol
+would run faster for very large classes (assuming fixed row size) is
+if the time for the instructor to query the row representative and add
+his or her contribution is less than the time it takes for someone to
+count the row outright -- which makes a certain amount of sense.  If
+the number of rows is small, then the report-and-add cycle must be
+modestly faster than the time to count a row in order for the parallel
+protocol to be faster.
+
+Of course, all of this ignores the issue of load imbalance
+(i.e. different numbers of students per row!)
