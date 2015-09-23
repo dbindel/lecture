@@ -8,13 +8,42 @@
     you should use a script to produce this plot, with both the serial
     fraction and the maximum number of cores as parameters.
 
+The parallel time is
+
+  t_s * (0.1 + 0.9/p)
+
+and the speedup is
+
+  S = t_s / t_p = 1/(0.1 + 0.9/p)
+
+The plotter (amdahl.py) and plot (amdahl.svg) are also provided.
+I used matplotlib to do the plotting.
+
+
 2.  Suppose a particular program can be partitioned into perfectly
     independent tasks, each of which takes time tau.  Tasks are
     set up, scheduled, and communicated to p workers at a (serial)
     central server; this takes an overhead time alpha per task.
     What is the theoretically achievable throughput (tasks/time)?
 
+The serial central server takes time alpha per task, which means that
+it can only dispatch at a rate of 1/alpha tasks per unit time.
+If there are enough workers, the serial cost at the server is
+the dominant time, and so the maximum possible throughput is 1/alpha.
+
+
 3.  Under what circumstances is it best to not tune?
+
+If the cost of the time required to tune exceeds the value of tuning
+(whether the value comes from the net time that the code will be
+executed or in time or from the learning opportunity), then it's
+probably better not to tune.  As a corollary, if speed of something
+matters and that something is not central to your own "value add"
+(research contribution, job specialty, etc) it is frequently worth
+paying for someone else's tuned code, or paying the time cost of
+figuring out how to build and link a free library that someone else
+has tuned, rather than spending your own time and energy.
+
 
 4.  The class cluster consists of eight nodes and fifteen Xeon Phi
     accelerator boards.  Based on an online search for information on
@@ -23,5 +52,7 @@
     you computed this, and give URLs for where you got the parameters
     in your calculation.  (We will return to this question again after
     we cover some computer architecture.)
-    
+
 5.  What is the approximate theoretical peak flop rate for your own machine?
+
+I will answer these in the next set of questions.
