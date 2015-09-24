@@ -3,12 +3,49 @@
    host cores are used, for the moment).  How do things change with
    the addition of the two Phi boards?
 
+Assuming a double precision floating point workload with equal
+multiplies and adds (as one often sees in linear algebra), we have
+computed the peak double precision flop rate of totient to be 460.8
+GFlop/s.  The memory bandwidth to each of the two chips is 59 GB/s.
+Hence, computations are memory bound up to an operational intensity of
+about 7.8 flops/byte.  If we only use a single core, we become
+computationally bound at 0.65 flops/byte; for a single core with no
+vectorization, we are memory bound at an intensity of 0.04 flops/byte
+(i.e. about three doubles read for any arithmetic operation).
+
+The roofline plotter is roofline.py; we show the roofline plot with
+the three different computational intensities in totient.svg.
+
+
 2. What is the difference between two cores and one core with
    hyperthreading?
+
+When there are two hardware threads, each supplies a separate
+front-end instruction stream, and the two threads may provide the
+scheduler on the core with more opportunities to identify independent
+instructions for simultaneous execution.  But two cores actually have
+more hardware resources.  For example, for each Xeon core there are
+two hardware threads sharing two FMA units; and either thread is
+capable of saturating both FMA units, given the right code.  But with
+two cores, you get twice as many FMA units, and thus twice the peak
+performance.
+
 
 3. Do a Google search to find a picture of how memories are arranged
    on the Phi architecture.  Describe the setup briefly in your own
    words.  Is the memory access uniform or non-uniform?
+
+https://software.intel.com/en-us/articles/intel-xeon-phi-coprocessor-codename-knights-corner
+
+Each core has its own L2 cache and a tag directory used to track which
+cache lines are where.  If a core requests a cache line and misses in
+its local L2 cache, it may fetch from another core (if the line is
+resident at another core); otherwise, it goes to main memory.  Hence,
+the L2 caches act like a small non-unform memory.  Addresses to the
+on-board memory (8 GB) are evenly distributed across several memory
+controllers on a ring bus; response from the memory should be pretty
+close to uniform, one hopes.
+
 
 4. Consider the parallel dot product implementations suggested in the
    slides.  As a function of the number of processors, the size of the
@@ -17,3 +54,9 @@
    [Note that dot products have low arithmetic intensity -- the
     roofline model may be useful for reasoning about the peak
     performance for computing pieces of the dot product]
+
+A single-core, unvectorized dot product *might* be compute bound.  Any
+sort of vectorization is going to make it memory bound; the max
+computational intensity is 1 flop/double (1 flop/8 bytes), which is
+below the ceiling for single-core vectorized performance on the
+roofline plot.
