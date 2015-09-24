@@ -6,8 +6,14 @@ that you can figure out the numerical jargon.
 
 0.  How much time did you spend on this pre-class exercise, and when?
 
+N/A
+
+
 1.  What are one or two points that you found least clear in the
     9/17 slide decks (including the narration)?
+
+N/A
+
 
 2.  Fill in the most straightforward implementation you can think of
     for multiplying a compressed sparse row matrix by a vector.
@@ -27,6 +33,11 @@ that you can figure out the numerical jargon.
           /* Fill in here */
       } 
 
+See code.  A good reference for this type of thing is "Templates for
+the Solution of Linear Systems" by Barrett et al (available from
+Netlib -- Google it!).
+
+
 3.  From the slides, complete the following short code:
 
       double laplacian_u(double (*u)(double x, double y),
@@ -39,6 +50,9 @@ that you can figure out the numerical jargon.
     laplacian_u is a C function pointer -- within the function,
     it can be called in the same way as an ordinary function (i.e.
     u(x,y)).  See the laplace2d.c code in this directory as an example.
+
+See code.
+
 
 4.  In one space dimension, the following numerical scheme
     approximately solves the wave equation
@@ -61,3 +75,23 @@ that you can figure out the numerical jargon.
     several steps without communicating, can you describe how to
     similarly advance this scheme?  Are there any advantages to such
     an organization if there is only one core available?
+
+The same basic scheme holds: pull out a copy of the data including
+"ghost cells" to advance a small region for several steps without
+synchronization.  There is a potential advantage to this even if we
+are using no parallelism, as we can get better cache locality by
+computing several steps of a block without reference to any other
+blocks.  This is a tradeoff between extra computation and
+communication; if we break the board into B-by-B blocks with borders
+of width k, then the cost of advancing one block by k steps is
+
+  k * (B+2(k-1))^2 cell updates
+
+as opposed to the normal k * B^2 updates.  We pay an overhead of
+
+  ordinary cost * (1+2(k-1)/B)^2
+
+which is not too great if k is relatively small compared to B.  The
+benefit is that the arithmetic intensity increases from 1 cell update
+/ memory access (if we spill out of cache) to k cell updates / memory
+access.
