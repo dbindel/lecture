@@ -12,6 +12,12 @@ double laplacian_u(double (*u)(double x, double y),
                    double h, double x, double y)
 {
     /* Fill in the solution here */
+    double upx = u(x+h,y);
+    double umx = u(x-h,y);
+    double upy = u(x,y+h);
+    double umy = u(x,y-h);
+    double u0  = u(x,y);
+    return (4*u0-upx-upy-umx-umy)/(h*h);
 }
 
 
