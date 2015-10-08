@@ -22,9 +22,19 @@ something into an already-full cache.
 the memory-based AI of this code? (Hint: What is the memory-based AI of just the
 innermost loop?)
 
+If 16N is larger than the L3 cache size, then we suffer a cache miss
+on every access to A or to B.  Hence there are 2 memory accesses and 2
+floating point ops (an add and a multiply) in the inner loop, which
+means an arithmetic intensity of 1 flop / double access.  In terms of
+flops/byte, this is 1/8.
+
 
 2. Now suppose that the cache is substantially larger than 16N, but
 substantially smaller than 8N^2. What is the AI now?
+
+In this case, we can fit a row of A, but not all of B.  This means
+that most of the time, we get a cache hit in A and a miss on the
+element of B; 1 memory access and 2 flops.  This is 1/4 flops/byte.
 
 
 3. Now suppose the cache is large enough to hold all of A, B, and C. What is the
@@ -32,19 +42,49 @@ AI now? (Hint: Writing to a byte of memory not already in the cache incurs two
 memory transfers: one to move the data to the cache for writing, and one to move
 the written data back to main memory.)
 
+If everything fits in cache, the data transfer cost is 4n^2 doubles (if we
+count read and write of C separately) and the computational cost is
+2n^3.  This gives AI = n/2 flops/double or n/16 flops/byte.
+
 
 4. Cache overflowing. On my CPU (Intel i7-4700 HQ), L1, L2, and L3 caches are 32
 KB, 256 KB, and 6 MB respectively. What is the largest problem size N that will
 fit in each cache? What is the arithmetic intensity associated with each problem
 size?
 
+This depends a bit on the organization of the multiply.  It is not
+necessary to fit all three matrices into cache simultaneously; fitting
+all of B, and one row at a time of A and C, for example, could work
+fine for the three-nested-loop organization above.  The three caches
+respectively fit 4K, 8K, and 1500K doubles, which would probably
+accomodate a 63-by-63, 90-by-90, or 1239-by-1239 matrix (roughly).
+The corresponding arithmetic intensities are given by (3).
+
 
 5. My CPU has 4 cores, each of which can do 8 fused multiply-adds per cycle, has
 a clock rate of 2.4 GHz, and a memory bandwidth of 25.6 GB/s. At what arithmetic
 intensity does my machine become CPU-bound?
 
+If we fully utilize the vector registers, we have
+
+  16 flops/cycle (treating FMA as 2 ops) * 2.4 GHz = 38.4 GFlop/s
+
+and 38.4 / 25.6 = 1.5.  Therefore we need an arithmetic intensity of
+at least 1.5 flops/byte (12 flops/double) before becoming CPU-bound.
+
 
 6. So, for what size range for N will naive matmul be CPU-bound on my machine?
 
+*If* you were able to fully utilize both vector units -- which you
+won't do with the naive implementation! -- you would be CPU-bound
+between N=24 and N=63.  You might be CPU-bound when you got to the L2
+and L3 cache, but that would probably take some re-organizing of the
+code.
+
 
 7. So, what will a plot of Flops/sec vs N look like?
+
+Goes up initially (it's not great for tiny matrices), but then it goes
+back down again fast.  Of course, the picture is a great deal more
+complicated, with things like conflict misses mucking things up, as
+discussed in the lecture slides.

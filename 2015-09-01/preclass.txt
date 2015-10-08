@@ -11,12 +11,72 @@ with questions for class!
     you computed this, and give URLs for where you got the parameters
     in your calculation.  (We will return to this question again after
     we cover some computer architecture.)
-    
+
+If we count each fused multiply add as two floating point ops (a
+multiply and an add), then we have the following flop rate for the
+Xeon chips on the nodes, assuming the clock base frequency:
+
+  2 flops/FMA *
+  4 FMA/vector FMA *
+  2 vector FMAs/cycle *
+  2.4e9 cycle/sec *
+  12 cores =
+  460.8 GFlop/s
+
+In addition, for one Xeon Phi chip (wider vector units but slower
+clocks), we have
+
+  2 flops/FMA *
+  8 FMA/vector FMA *
+  2 vector FMAs/cycle *
+  1.053e9 cycle/sec *
+  60 cores =
+  2021.8 GFlop/s
+
+All together, a node with two Phi boards has a peak flop rate of
+4504.4 GFlop/s = 4.504 TFlop/s.  If we look across all the nodes, we
+have 15 Phi boards and 8 dual-chip motherboards, or
+
+  8*460.8 GFlop/s + 15*2021.8 GFlop/s = 34.013 TFlop/s
+
+For reference, see also
+
+  http://www.intel.com/content/www/us/en/benchmarks/server/xeon-phi/xeon-phi-theoretical-maximums.html
+
+Note that in the above reference, a FMA is treated as a single
+instruction (this accounts for the factor of two difference between
+our throughput numbers for the Phi boards and the numbers in the
+reference).
+
+
 2.  What is the approximate theoretical peak flop rate for your own machine?
+
+I actually did this in the class slides -- see
+
+  http://cornell-cs5220-f15.github.io/slides/2015-09-01-parallel.html#/16
+
 
 3.  Suppose there are t tasks that can be executed in a pipeline
     with p stages.  What is the speedup over serial execution of the
     same tasks?
+
+Let's say each stage takes one unit of time.  The time to complete the
+first task is p; after that, we complete one more task per unit time,
+so that the total time to complete all the tasks is
+
+    p + t-1
+
+In contrast, the time for serial execution is
+
+   p * t
+
+The speedup (serial time over parallel time) is
+
+  p * t / (p + t - 1) = p / ( 1 + (p-1)/t )
+
+For large t, the speedup approaches p.  When t is small, however, the
+time to fill and empty the pipeline limits the available speedup.
+
 
 4.  Consider the following list of tasks (assume they can't be pipelined):
 
@@ -31,6 +91,22 @@ with questions for class!
     a compiled application?  What is the minimum parallel time given
     an arbitrary number of processors?
 
+We can write a timeline that follows the graph dependencies:
+
+  0:00 - Start GCC
+  1:00 - Done GCC, start OpenMPI, OpenBLAS
+  1:15 - Done GCC+OpenBLAS, start LAPACK
+  1:30 - Done GCC+OpenBLAS+OpenMPI
+  1:45 - Done GCC+OpenBLAS+OpenMPI+LAPACK, start application
+  2:15 - Done all compiles
+
+The minimum time required is determined by the longest path through
+the dependency graph: (GCC - OpenBLAS - LAPACK - application).  This
+is true in general of parallel processing: no matter how many parallel
+resources there are, there is a minimum compute time determined by
+latencies and data dependencies.
+
+
 5.  Clone the membench repository from GitHub:
 
        git clone git@github.com:cornell-cs5220-f15/membench.git
@@ -43,6 +119,15 @@ with questions for class!
     timings-heat.pdf; what can you tell about the cache architecture
     on your machine from the plot?
 
+See:
+
+  https://github.com/cornell-cs5220-f15/membench/blob/macbook/timings-heat.pdf
+
+In that file, I marked lines corresponding to the cache associativity,
+the cache line size, the page size, and the sizes of various levels of
+cache.
+
+
 6.  From the cloned repository, check out the totient branch:
 
        git checkout totient
@@ -51,6 +136,11 @@ with questions for class!
     If you prefer, you can also look at the files on GitHub.  Either
     way, repeat the exercise of problem 5.  What can you tell about
     the cache architecture of the totient nodes?
+
+Similarly, see:
+
+  https://github.com/cornell-cs5220-f15/membench/blob/totient/timings-heat.pdf
+
 
 7.  Implement the following three methods of computing the centroid
     of a million two-dimensional coordinates (double precision).
@@ -69,3 +159,10 @@ with questions for class!
     compiler.  To do this, run "module load cs5220" and run (e.g.)
 
         icc -o centroid centroid.c
+
+In each case, we are limited not by arithmetic, but by the memory
+bandwidth.  For both options (a) and (c), we access data with stride
+1; for option (b), we access data with stride 2... and have to pull in
+all the same cache lines for both passes through the array.
+Consequently, options (a) and (c) both run about twice as fast as
+option (b).

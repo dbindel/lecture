@@ -5,8 +5,14 @@ the glider pattern for a few generations.
 
 0.  How much time did you spend on this pre-class exercise, and when?
 
+N/A
+
+
 1.  What are one or two points that you found least clear in the
     9/15 slide decks (including the narration)?
+
+N/A
+
 
 2.  In the basic implementation provided, what size board for the Game
     of Life would fit in L3 cache for one of the totient nodes?  Add a
@@ -16,7 +22,12 @@ the glider pattern for a few generations.
 
 The basic implementation uses one byte per cell, so we could
 accomodate up to 15M (really 15*2^20) cells -- just under a
-4000-by-4000 grid.
+4000-by-4000 grid.  However, the operational intensity for the current
+implementation is sufficiently low that cache usage makes almost no
+difference, as can be seen by comparing the performance of an
+implementation that fits in L1 and a performance that spills out of L3
+-- the time to update a cell is almost identical in each case.
+
 
 3.  Assuming that we want to advance time by several generations,
     suggest a blocking strategy that would improve the operational
@@ -25,10 +36,21 @@ accomodate up to 15M (really 15*2^20) cells -- just under a
     want to try your hand at implementing your strategy (though you
     need not spend too much time on it).
 
+We partition the board into disjoint chunks, and refer to a bordered
+chunk as the chunk plus a few layers of ghost cells copied from
+neighboring regions.  If there are k layers of ghost cells, we can
+proceed for k steps without synchronization before we start to mess
+up the "core" data in each chunk.
+
+
 4.  Comment on what would be required to parallelize this code
     according to the domain decomposition strategy outlined in the
     slides.  Do you think you would see good speedups on one of
     the totient nodes?  Why or why not?
+
+Nobody's going to see any speedup without improving the operational
+intensity!  Presumably some vectorization would help with this.
+
 
 5.  Suppose we want to compute long-range interactions between two
     sets of particles in parallel using the obvious n^2 algorithm in a
@@ -53,3 +75,14 @@ accomodate up to 15M (really 15*2^20) cells -- just under a
     Based on what you know about memories and parallel architecture,
     do you see any features of this approach that are likely to lead
     to poor performance?
+
+It's probably not a great idea to keep the force accumulators fx and
+fy in the same place as the particle coordinates x and y -- if we do,
+even though only one processor may be responsible for updating fx and
+fy for any given particle, there will be a lot of coherence traffic
+between the processors due to false sharing.
+
+It's also likely to be more efficient to compute the interactions
+between one particle and several other particles simultaneously; the
+compiler may or may not be able to help with that, depending on the
+complexity of the apply_forces function and the compiler flags.
